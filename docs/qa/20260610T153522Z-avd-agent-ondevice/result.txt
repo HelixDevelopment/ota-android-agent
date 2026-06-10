@@ -1,0 +1,11 @@
+=== ota-android-agent on-device instrumentation result (2026-06-10T15:35:45Z) ===
+avd=Pixel_8 serial=emulator-5588 abi=arm64-v8a sdk=35 test_pkg=digital.vasic.helix.ota.agent.test runner=androidx.test.runner.AndroidJUnitRunner
+ok_line='OK (5 tests)'  fail_marker=''  status_fail=''
+--- on-device logcat (tag OtaAgentOnDeviceTest) ---
+--------- beginning of main
+06-10 20:35:45.574  2080  2342 I OtaAgentOnDeviceTest: ON-DEVICE: android.os.UpdateEngine class present=true (observed FACT)
+06-10 20:35:45.577  2080  2342 I OtaAgentOnDeviceTest: ON-DEVICE: graceful degradation confirmed -> Failed(java.lang.reflect.InvocationTargetException: null); engineClassPresent=true
+06-10 20:35:45.602  2080  2342 I OtaAgentOnDeviceTest: ON-DEVICE: sdk=35 abi=arm64-v8a fingerprint=google/sdk_gphone64_arm64/emu64a:15/AE3A.240806.036/12592187:user/release-keys
+06-10 20:35:45.654  2080  2342 I OtaAgentOnDeviceTest: ON-DEVICE: PollStateMachine full cycle -> Success; verify-reject -> Failed(HASH_MISMATCH)
+06-10 20:35:45.657  2080  2342 I OtaAgentOnDeviceTest: ON-DEVICE: DeltaApplyDecision USE_DELTA/NO_DELTA_OFFERED/BASE_MISMATCH all correct
+06-10 20:35:45.669  2080  2342 I OtaAgentOnDeviceTest: ON-DEVICE: VerifyBeforeApply Apply/HASH_MISMATCH/SIGNATURE_INVALID/MALFORMED_DIGEST all correct

@@ -22,6 +22,9 @@ android {
 
     defaultConfig {
         minSdk = 31
+        // Real on-device instrumentation runner (androidx.test) — the connectedAndroidTest /
+        // `am instrument` entry point that runs the androidTest sources ON the booted AVD.
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
     compileOptions {
@@ -49,4 +52,12 @@ dependencies {
     implementation(project(":core"))
     implementation("androidx.work:work-runtime-ktx:2.9.1")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")
+
+    // androidTest — REAL on-device instrumentation (runs ON the booted AVD via
+    // connectedAndroidTest / `am instrument`). Asserts the agent's genuine on-device
+    // behaviour: pure :core decision logic over real inputs + the graceful
+    // update_engine-absent degradation path of ReflectiveUpdateEngineApplyPort.
+    androidTestImplementation("androidx.test.ext:junit:1.1.5")
+    androidTestImplementation("androidx.test:runner:1.5.2")
+    androidTestImplementation("androidx.test:core:1.5.0")
 }
