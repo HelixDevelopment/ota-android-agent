@@ -1,0 +1,9 @@
+Archive:  android/build/outputs/aar/android-release.aar
+  Length      Date    Time    Name
+---------  ---------- -----   ----
+        0  02-01-1980 00:00   R.txt
+     1013  02-01-1980 00:00   AndroidManifest.xml
+    36904  02-01-1980 00:00   classes.jar
+      156  02-01-1980 00:00   META-INF/com/android/build/gradle/aar-metadata.properties
+---------                     -------
+    38073                     4 files

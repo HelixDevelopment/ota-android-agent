@@ -1,0 +1,114 @@
+To honour the JVM settings for this build a single-use Daemon process will be forked. For more on this, please refer to https://docs.gradle.org/9.5.0/userguide/gradle_daemon.html#sec:disabling_the_daemon in the Gradle documentation.
+Daemon will be stopped at the end of the build 
+Configuration on demand is an incubating feature.
+Directory '/opt/homebrew/Cellar/openjdk@21/libexec/openjdk.jdk/Contents/Home' (Gradle property 'org.gradle.java.installations.paths') used for java installations does not exist
+> Task :core:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :core:processResources NO-SOURCE
+> Task :core:processTestResources NO-SOURCE
+> Task :core:compileKotlin
+> Task :core:compileJava NO-SOURCE
+> Task :core:classes UP-TO-DATE
+> Task :core:jar
+> Task :core:compileTestKotlin
+> Task :core:compileTestJava NO-SOURCE
+> Task :core:testClasses UP-TO-DATE
+
+> Task :core:test
+
+DeltaApplyDecisionTest > fullPayload_whenDeltaMalformed_nonPositiveSize() PASSED
+
+DeltaApplyDecisionTest > fullPayload_whenDeviceStateBlank() PASSED
+
+DeltaApplyDecisionTest > mutationImmunity_baseMatchGateIsLoadBearing() PASSED
+
+DeltaApplyDecisionTest > baseHashComparison_isCaseInsensitiveAndTrimmed() PASSED
+
+DeltaApplyDecisionTest > useDelta_whenBaseVersionAndHashMatch() PASSED
+
+DeltaApplyDecisionTest > fullPayload_whenDeltaMalformed_blankUrl() PASSED
+
+DeltaApplyDecisionTest > fullPayload_whenBaseVersionMismatch() PASSED
+
+DeltaApplyDecisionTest > fullPayload_whenDeltaMalformed_blankBaseFields() PASSED
+
+DeltaApplyDecisionTest > fullPayload_whenBaseHashMismatch() PASSED
+
+DeltaApplyDecisionTest > ordering_malformedTakesPrecedenceOverMismatch() PASSED
+
+DeltaApplyDecisionTest > fullPayload_whenNoDeltaOffered() PASSED
+
+JitterTest > seededRng_isDeterministic() PASSED
+
+JitterTest > zeroBase_stillBoundedByJitter() PASSED
+
+JitterTest > delayWithinBounds_overManySeededDraws() PASSED
+
+JitterTest > negativeJitter_throws() PASSED
+
+JitterTest > negativeBase_throws() PASSED
+
+JitterTest > zeroJitter_returnsExactlyBase() PASSED
+
+PollStateMachineTest > illegalTransition_onApplyStartFromDownloaded_throws() PASSED
+
+PollStateMachineTest > verifyReject_terminatesHardFailure_neverReachesApply() PASSED
+
+PollStateMachineTest > terminalFlags() PASSED
+
+PollStateMachineTest > illegalTransition_onVerifyFromIdle_throws() PASSED
+
+PollStateMachineTest > poll_transientError_terminatesRetry() PASSED
+
+PollStateMachineTest > downloadFailure_terminatesRetry() PASSED
+
+PollStateMachineTest > fullHappyPath_pollToApplySuccess() PASSED
+
+PollStateMachineTest > applyThrow_terminatesRetry() PASSED
+
+PollStateMachineTest > illegalTransition_onDownloadFromIdle_throws() PASSED
+
+PollStateMachineTest > poll_noUpdate_terminatesSuccess() PASSED
+
+CodecRoundTripTest > payloadProperties_asHeaderArray_matchesApplyPayloadContract() PASSED
+
+CodecRoundTripTest > updateState_hasSevenValues_includingIdle() PASSED
+
+CodecRoundTripTest > telemetryReport_roundTrip_allSixEventTypes() PASSED
+
+CodecRoundTripTest > telemetryAck_roundTrip() PASSED
+
+CodecRoundTripTest > updateAvailable_parsesSpecExampleShape() PASSED
+
+CodecRoundTripTest > telemetryReport_roundTrip_nullHealthAndDeployment() PASSED
+
+CodecRoundTripTest > json_escapesAndUnescapesSpecialChars() PASSED
+
+CodecRoundTripTest > updateAvailable_roundTrip() PASSED
+
+CodecRoundTripTest > updateCheckRequest_roundTrip_withNullVersion() PASSED
+
+CodecRoundTripTest > telemetryEvent_hasExactlySixValues_noIdle() PASSED
+
+CodecRoundTripTest > fromWire_unknownValue_throws() PASSED
+
+VerifyBeforeApplyTest > apply_whenHashMatchesAndSignatureValid() PASSED
+
+VerifyBeforeApplyTest > reject_malformed_whenActualBlank() PASSED
+
+VerifyBeforeApplyTest > reject_signatureInvalid_evenWhenHashMatches() PASSED
+
+VerifyBeforeApplyTest > mutationImmunity_invertedHashCompareWouldFlipDecision() PASSED
+
+VerifyBeforeApplyTest > ordering_malformedTakesPrecedenceOverHashAndSignature() PASSED
+
+VerifyBeforeApplyTest > ordering_hashMismatchTakesPrecedenceOverSignature() PASSED
+
+VerifyBeforeApplyTest > hashComparison_isCaseInsensitiveAndTrimmed() PASSED
+
+VerifyBeforeApplyTest > reject_malformed_whenExpectedEmpty() PASSED
+
+VerifyBeforeApplyTest > reject_hashMismatch() PASSED
+
+BUILD SUCCESSFUL in 8s
+4 actionable tasks: 4 executed
+Consider enabling configuration cache to speed up this build: https://docs.gradle.org/9.5.0/userguide/configuration_cache_enabling.html

@@ -5,7 +5,7 @@
 | Module | `ota-android-agent` (1.0.0-MVP) |
 | Build tool | system Gradle **9.5.0** (no wrapper generated, per instructions) |
 | JDK | toolchain **17** (`/opt/homebrew/Cellar/openjdk@17`) for `:core`; launcher JVM is 25 |
-| Date | 2026-06-07 |
+| Date | 2026-06-10 |
 
 This document records **exactly** what builds and tests pass in this environment versus what
 requires the full AOSP / system-API toolchain. No result here is faked (anti-bluff §7.1).
@@ -48,13 +48,38 @@ ota-android-agent/
 
 ## What PASSES here (verified, reproducible)
 
+### `:android` AAR — PASS (2026-06-10)
+
+```
+gradle --no-daemon --console=plain :android:assembleRelease
+```
+
+`BUILD SUCCESSFUL` — produces `android/build/outputs/aar/android-release.aar` (≈33 KB),
+containing a real `classes.jar` (35 entries) with the compiled agent classes
+(`OtaPollWorker`, `PollScheduler`, `ApplyPort`, `ReflectiveUpdateEngineApplyPort`, the
+`PollResult` / `VerifyResult` / `ApplyResult` value types, `AgentDependencies`, etc.).
+
+**Fix that unblocked it (2026-06-10):** the prior `BUILD FAILED` (`KotlinAndroidTarget` →
+`com/android/build/gradle/api/BaseVariant`) was NOT a structural AGP-on-Gradle-9.5
+incompatibility — it was caused by `:android` applying `kotlin("android")` **without a
+pinned version** while the root only pinned `kotlin("jvm")`. The unpinned Kotlin-Android
+plugin resolved a Kotlin Gradle plugin that referenced the AGP-removed `BaseVariant` API.
+Pinning all three plugins at the root with `apply false` (`org.jetbrains.kotlin.jvm`,
+`org.jetbrains.kotlin.android`, `com.android.library` — all version-aligned: Kotlin 2.2.0 +
+AGP 8.5.2) and applying them version-less per module — exactly mirroring the proven-working
+`ota-update-engine-bridge` `:android` configuration — makes AGP 8.5.2 + Kotlin 2.2.0 build
+cleanly on **Gradle 9.5.0**. The agent additionally required `android.useAndroidX=true` in
+`gradle.properties` because `:android` depends on `androidx.work:work-runtime-ktx`.
+
 ### `:core` unit tests — PASS
 
 ```
 gradle --no-daemon --console=plain :core:test
 ```
 
-`BUILD SUCCESSFUL` — **36 tests, 0 failures** across 4 suites:
+`BUILD SUCCESSFUL` — **0 failures** across all suites (full `--rerun-tasks` run on
+2026-06-10 reported **47 tests PASSED, 0 FAILED**; the per-suite breakdown below counts the
+originally-documented 36 from `core/build/test-results/test/*.xml`):
 
 | Suite | Tests | Covers |
 | --- | --- | --- |
@@ -67,13 +92,9 @@ gradle --no-daemon --console=plain :core:test
 
 ---
 
-## What does NOT build here (honest result) — `:android`
+## Historical note — the prior `:android` `BUILD FAILED` (now RESOLVED 2026-06-10)
 
-```
-gradle --no-daemon --console=plain :android:assembleRelease
-```
-
-**`BUILD FAILED`** — root cause:
+The earlier failure (kept for the forensic record) was:
 
 ```
 An exception occurred applying plugin request [id: 'org.jetbrains.kotlin.android']
@@ -83,29 +104,16 @@ An exception occurred applying plugin request [id: 'org.jetbrains.kotlin.android
          > com/android/build/gradle/api/BaseVariant
 ```
 
-This is the **expected AGP-on-Gradle-9.5 incompatibility**, not a code defect:
-
-- The Android Gradle Plugin (8.7.3) and the Kotlin-Android plugin reference
-  `com.android.build.gradle.api.BaseVariant`, an API surface that does **not** load under the
-  system **Gradle 9.5** here. AGP 8.7.x is validated against Gradle **8.x**, and AGP fails fast
-  on newer Gradle. There is no AGP release in this environment compatible with Gradle 9.5.
-- The failure occurs at **plugin application / configuration time** — before any of the agent's
-  Kotlin is compiled — so it reflects the toolchain, not the `:android` source.
-
-Because `:android` plugin configuration fails, `gradle :core:test` is run with
-`org.gradle.configureondemand=true` (set in `gradle.properties`) so the `:core` task does **not**
-configure the `:android` project. This is why `:core:test` passes cleanly.
-
-### What the `:android` layer needs to build
-
-To compile/assemble `:android`, use the standard Android toolchain (any of):
-
-- **Gradle 8.x** (e.g. 8.9–8.11) matched to **AGP 8.7.x** — the supported pairing; or
-- the Android Studio / AOSP-provided Gradle + AGP, with the Android SDK (`compileSdk 34`)
-  and `ANDROID_HOME` configured.
+This was first attributed to an "AGP-on-Gradle-9.5 incompatibility". That attribution was
+**incorrect** (§11.4.6): the true root cause was the **unpinned** `kotlin("android")` plugin in
+`:android` (the root pinned only `kotlin("jvm")`), which resolved a Kotlin Gradle plugin
+referencing the AGP-removed `BaseVariant` API. Pinning all three plugins to version-aligned
+releases at the root (Kotlin 2.2.0 + AGP 8.5.2) — the proven `ota-update-engine-bridge` pattern —
+makes `:android:assembleRelease` build cleanly on Gradle 9.5.0. See the PASS section above.
 
 The `:android` Kotlin sources are written against **real** public AndroidX WorkManager APIs and
-the public Android SDK; no stubs are used.
+the public Android SDK; no stubs are used. `org.gradle.configureondemand=true` is retained in
+`gradle.properties` (it remains harmless now that `:android` configures cleanly).
 
 ### Why `UpdateEngine` is accessed via reflection
 

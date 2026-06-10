@@ -8,11 +8,12 @@
 // UpdateEngine is @SystemApi and NOT in the public android.jar; the bridge accesses it via
 // reflection so this module compiles against the public SDK (see ApplyPort / ReflectiveUpdateEngineApplyPort).
 
+// Plugins applied version-less — versions are pinned at the root build (apply false),
+// mirroring the proven-working ota-update-engine-bridge :android module so kotlin.android
+// resolves to 2.2.0 (compatible with AGP 8.5.2 on Gradle 9.5).
 plugins {
-    id("com.android.library") version "8.5.2"
-    // Kotlin version inherited from the root classpath (kotlin("jvm") 2.2.0 apply false)
-    // to avoid an "already on the classpath" plugin-version conflict under Gradle 9.5.
-    kotlin("android")
+    id("com.android.library")
+    id("org.jetbrains.kotlin.android")
 }
 
 android {
@@ -28,9 +29,15 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
 
-    kotlinOptions {
-        jvmTarget = "17"
+    buildTypes {
+        release {
+            isMinifyEnabled = false
+        }
     }
+}
+
+kotlin {
+    jvmToolchain(17)
 }
 
 repositories {

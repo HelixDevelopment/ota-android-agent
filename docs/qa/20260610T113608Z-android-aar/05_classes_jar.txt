@@ -1,0 +1,40 @@
+Archive:  /tmp/agent_classes.jar
+  Length      Date    Time    Name
+---------  ---------- -----   ----
+        0  01-01-1981 01:01   META-INF/
+        0  01-01-1981 01:01   digital/
+        0  01-01-1981 01:01   digital/vasic/
+        0  01-01-1981 01:01   digital/vasic/helix/
+        0  01-01-1981 01:01   digital/vasic/helix/ota/
+        0  01-01-1981 01:01   digital/vasic/helix/ota/agent/
+        0  01-01-1981 01:01   digital/vasic/helix/ota/agent/apply/
+        0  01-01-1981 01:01   digital/vasic/helix/ota/agent/poll/
+      810  01-01-1981 01:01   digital/vasic/helix/ota/agent/apply/ApplyPort.class
+     2702  01-01-1981 01:01   digital/vasic/helix/ota/agent/apply/ApplyResult$Failed.class
+     1397  01-01-1981 01:01   digital/vasic/helix/ota/agent/apply/ApplyResult$Launched.class
+      762  01-01-1981 01:01   digital/vasic/helix/ota/agent/apply/ApplyResult.class
+     4632  01-01-1981 01:01   digital/vasic/helix/ota/agent/apply/ReflectiveUpdateEngineApplyPort.class
+     4072  01-01-1981 01:01   digital/vasic/helix/ota/agent/apply/VerifiedPackage.class
+     5503  01-01-1981 01:01   digital/vasic/helix/ota/agent/poll/AgentDependencies.class
+      861  01-01-1981 01:01   digital/vasic/helix/ota/agent/poll/ControlPlaneClient.class
+     3261  01-01-1981 01:01   digital/vasic/helix/ota/agent/poll/DownloadResult.class
+     1173  01-01-1981 01:01   digital/vasic/helix/ota/agent/poll/Downloader.class
+     2200  01-01-1981 01:01   digital/vasic/helix/ota/agent/poll/OtaPollWorker$Companion$runCycle$1.class
+     9949  01-01-1981 01:01   digital/vasic/helix/ota/agent/poll/OtaPollWorker$Companion.class
+     1759  01-01-1981 01:01   digital/vasic/helix/ota/agent/poll/OtaPollWorker$doWork$1.class
+     4748  01-01-1981 01:01   digital/vasic/helix/ota/agent/poll/OtaPollWorker.class
+     3564  01-01-1981 01:01   digital/vasic/helix/ota/agent/poll/PollConfig.class
+      857  01-01-1981 01:01   digital/vasic/helix/ota/agent/poll/PollResult$DefaultImpls.class
+     1532  01-01-1981 01:01   digital/vasic/helix/ota/agent/poll/PollResult$NoUpdate.class
+     1550  01-01-1981 01:01   digital/vasic/helix/ota/agent/poll/PollResult$TransientError.class
+     3084  01-01-1981 01:01   digital/vasic/helix/ota/agent/poll/PollResult$Update.class
+     2224  01-01-1981 01:01   digital/vasic/helix/ota/agent/poll/PollResult.class
+     5118  01-01-1981 01:01   digital/vasic/helix/ota/agent/poll/PollScheduler.class
+      763  01-01-1981 01:01   digital/vasic/helix/ota/agent/poll/Telemetry.class
+     1121  01-01-1981 01:01   digital/vasic/helix/ota/agent/poll/Verifier.class
+     2888  01-01-1981 01:01   digital/vasic/helix/ota/agent/poll/VerifyResult$Ok.class
+     2662  01-01-1981 01:01   digital/vasic/helix/ota/agent/poll/VerifyResult$Rejected.class
+      746  01-01-1981 01:01   digital/vasic/helix/ota/agent/poll/VerifyResult.class
+       24  01-01-1981 01:01   META-INF/android_release.kotlin_module
+---------                     -------
+    69962                     35 files

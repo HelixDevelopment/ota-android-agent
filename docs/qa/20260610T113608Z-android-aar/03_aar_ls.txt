@@ -1,0 +1,1 @@
+-rw-r--r--@ 1 milosvasic  staff  33519 Jun 10 16:37 android/build/outputs/aar/android-release.aar
