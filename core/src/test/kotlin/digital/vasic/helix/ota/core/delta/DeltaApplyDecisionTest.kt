@@ -79,6 +79,32 @@ class DeltaApplyDecisionTest {
     }
 
     @Test
+    fun fullPayload_whenCurrentShaBlank_butVersionPresent() {
+        // Isolates the curSha.isEmpty() operand of the malformed `||` chain: version is
+        // present, ONLY the device's current SHA-256 is blank -> DELTA_MALFORMED (never
+        // risk a delta when we cannot identify the device's base image).
+        val d = DeltaApplyDecision.decide(currentVersion = curVersion, currentSha256 = "   ", offer = offer())
+        assertEquals(DeltaDecision(ApplyChoice.FULL_PAYLOAD, DeltaReason.DELTA_MALFORMED), d)
+    }
+
+    @Test
+    fun fullPayload_whenOfferBaseShaBlank_butBaseVersionPresent() {
+        // Isolates the baseSha.isEmpty() operand: the offer's base VERSION is present but
+        // its base SHA-256 is blank -> DELTA_MALFORMED.
+        val d = DeltaApplyDecision.decide(curVersion, curSha, offer(baseSha256 = "  "))
+        assertEquals(DeltaDecision(ApplyChoice.FULL_PAYLOAD, DeltaReason.DELTA_MALFORMED), d)
+    }
+
+    @Test
+    fun decisionFields_choiceAndReasonAreReadable() {
+        // Exercises the DeltaDecision data-class component accessors (choice + reason)
+        // directly rather than only via equals().
+        val d = DeltaApplyDecision.decide(curVersion, curSha, offer())
+        assertEquals(ApplyChoice.USE_DELTA, d.choice)
+        assertEquals(DeltaReason.BASE_MATCHES, d.reason)
+    }
+
+    @Test
     fun mutationImmunity_baseMatchGateIsLoadBearing() {
         // A matching base USES the delta; any mismatch FALLS BACK. A mutation that
         // inverted the base-match check would flip one of these PASS->FAIL.

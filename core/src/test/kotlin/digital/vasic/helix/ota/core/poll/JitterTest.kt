@@ -52,4 +52,23 @@ class JitterTest {
             Jitter.nextDelayMillis(base, -1L, Random(1))
         }
     }
+
+    @Test
+    fun defaultRng_isUsedWhenRngOmitted() {
+        // Calling the 2-arg form (rng defaulted to Random.Default) exercises the
+        // `nextDelayMillis$default` bridge. With zero jitter the result is deterministic
+        // (exactly base) so the default-RNG path is asserted without flakiness.
+        assertEquals(base, Jitter.nextDelayMillis(base, 0L))
+    }
+
+    @Test
+    fun defaultRng_withJitter_staysWithinBounds() {
+        // Non-zero jitter via the default RNG: the draw is non-deterministic but MUST
+        // remain within [base, base+jitterMax). Proves the default RNG actually draws.
+        repeat(1_000) {
+            val d = Jitter.nextDelayMillis(base, jitterMax)
+            assertTrue(d >= base, "delay $d below base $base")
+            assertTrue(d < base + jitterMax, "delay $d >= base+jitterMax ${base + jitterMax}")
+        }
+    }
 }

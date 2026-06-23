@@ -91,4 +91,52 @@ class PollStateMachineTest {
         assertTrue(!PollState.Idle.isTerminal)
         assertTrue(!PollState.Verified.isTerminal)
     }
+
+    @Test
+    fun nonTerminalFlags_everyIntermediateStateIsNonTerminal() {
+        // isTerminal must be false for every NON-terminal state. This both exercises the
+        // intermediate PollState members (Polled/Assigned/Downloading/Downloaded/Applying)
+        // and asserts the terminal predicate does not over-fire on them.
+        assertTrue(!PollState.Polled.isTerminal)
+        assertTrue(!PollState.Assigned.isTerminal)
+        assertTrue(!PollState.Downloading.isTerminal)
+        assertTrue(!PollState.Downloaded.isTerminal)
+        assertTrue(!PollState.Applying.isTerminal)
+    }
+
+    @Test
+    fun poll_fromPolledState_isAlsoValid() {
+        // onPoll accepts Idle OR Polled (a re-poll after a prior poll). The Polled branch
+        // of the `check` precondition was previously unexercised.
+        assertEquals(
+            PollState.Assigned,
+            PollStateMachine.onPoll(PollState.Polled, PollOutcome.UpdateAssigned),
+        )
+        assertEquals(
+            PollState.Success,
+            PollStateMachine.onPoll(PollState.Polled, PollOutcome.NoUpdate),
+        )
+        assertEquals(
+            PollState.Retry,
+            PollStateMachine.onPoll(PollState.Polled, PollOutcome.TransientError),
+        )
+    }
+
+    @Test
+    fun illegalTransition_onPollFromAssigned_throws() {
+        // onPoll is only valid from Idle/Polled — any other state must fail loudly so a
+        // wiring bug never silently re-polls mid-cycle.
+        assertFailsWith<IllegalStateException> {
+            PollStateMachine.onPoll(PollState.Assigned, PollOutcome.NoUpdate)
+        }
+    }
+
+    @Test
+    fun illegalTransition_onApplyResultFromNonApplying_throws() {
+        // onApplyResult is only valid from Applying — the failing `check` branch on
+        // line 106 of PollStateMachine.kt was previously unexercised.
+        assertFailsWith<IllegalStateException> {
+            PollStateMachine.onApplyResult(PollState.Verified, applyThrew = false)
+        }
+    }
 }

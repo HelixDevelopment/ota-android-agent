@@ -111,6 +111,22 @@ class CodecRoundTripTest {
     }
 
     @Test
+    fun telemetryAck_absentCounters_defaultToZero() {
+        // A server response omitting "accepted" and "rejected" must parse with both
+        // defaulting to 0 (the `?: 0` elvis fallbacks in OtaCodec.telemetryAck) rather
+        // than throwing — request_id is still required.
+        val parsed = OtaCodec.telemetryAck("""{"request_id":"01J-only"}""")
+        assertEquals(TelemetryAck(accepted = 0, rejected = 0, requestId = "01J-only"), parsed)
+    }
+
+    @Test
+    fun telemetryAck_partialCounters_onlyAcceptedPresent() {
+        // Only "accepted" present: accepted parses, rejected falls back to 0.
+        val parsed = OtaCodec.telemetryAck("""{"accepted":5,"request_id":"01J-partial"}""")
+        assertEquals(TelemetryAck(accepted = 5, rejected = 0, requestId = "01J-partial"), parsed)
+    }
+
+    @Test
     fun telemetryEvent_hasExactlySixValues_noIdle() {
         assertEquals(6, TelemetryEvent.entries.size)
         assertEquals(
