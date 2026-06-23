@@ -3,6 +3,7 @@
 
 plugins {
     kotlin("jvm")
+    jacoco
 }
 
 repositories {
@@ -18,6 +19,15 @@ tasks.test {
     testLogging {
         events("passed", "skipped", "failed")
         showStandardStreams = true
+    }
+    finalizedBy(tasks.jacocoTestReport)
+}
+
+tasks.jacocoTestReport {
+    dependsOn(tasks.test)
+    reports {
+        xml.required.set(true)
+        html.required.set(true)
     }
 }
 
