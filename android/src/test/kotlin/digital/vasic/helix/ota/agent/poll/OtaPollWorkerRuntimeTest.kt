@@ -31,10 +31,13 @@ import digital.vasic.helix.ota.core.protocol.PayloadProperties
 import digital.vasic.helix.ota.core.protocol.TelemetryEvent
 import digital.vasic.helix.ota.core.protocol.UpdateAvailable
 import digital.vasic.helix.ota.core.verify.RejectReason
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertThrows
 import org.junit.Test
+import java.io.IOException
 
 private fun sampleAssignment(): UpdateAvailable = UpdateAvailable(
     releaseId = "release-1",
@@ -81,6 +84,26 @@ private class FakeTelemetry : Telemetry {
     override fun reportRaw(stateName: String) {
         reported += stateName
     }
+}
+
+/** A ControlPlaneClient whose poll THROWS instead of returning a typed PollResult. */
+private class ThrowingControlPlaneClient(private val error: Throwable) : ControlPlaneClient {
+    override suspend fun pollForUpdate(): PollResult = throw error
+}
+
+/** A Downloader whose download THROWS instead of returning a typed DownloadResult. */
+private class ThrowingDownloader(private val error: Throwable) : Downloader {
+    var deletedPath: String? = null
+    override suspend fun downloadToLocal(assignment: UpdateAvailable): DownloadResult = throw error
+    override fun delete(localPath: String) {
+        deletedPath = localPath
+    }
+}
+
+/** A Verifier whose verify THROWS instead of returning a typed VerifyResult. */
+private class ThrowingVerifier(private val error: Throwable) : Verifier {
+    override suspend fun verify(localPath: String, assignment: UpdateAvailable): VerifyResult =
+        throw error
 }
 
 class OtaPollWorkerRuntimeTest {
@@ -186,5 +209,93 @@ class OtaPollWorkerRuntimeTest {
         val state = OtaPollWorker.runCycle(deps)
 
         assertEquals(PollState.Failed(RejectReason.MALFORMED_DIGEST), state)
+    }
+
+    /**
+     * DEFECT (2nd-pass audit): a suspend port that THROWS a transient failure (a real
+     * HTTP/IO client raises IOException on a network blip rather than returning a typed
+     * transient outcome) must degrade the cycle to Retry — never escape runCycle uncaught
+     * (WorkManager maps an uncaught exception to Result.failure(), i.e. NO backoff retry,
+     * the opposite of the returned-transient path which correctly retries).
+     */
+    @Test
+    fun `poll throwing a transient IOException degrades to Retry, not an uncaught crash`() = runBlocking {
+        val deps = AgentDependencies(
+            client = ThrowingControlPlaneClient(IOException("connection reset")),
+            downloader = FakeDownloader(DownloadResult(DownloadOutcome.Downloaded, "/unused")),
+            verifier = FakeVerifier(VerifyResult.Rejected(RejectReason.HASH_MISMATCH)),
+            applyPort = FakeApplyPort(ApplyResult.Launched),
+            telemetry = FakeTelemetry(),
+        )
+
+        val state = OtaPollWorker.runCycle(deps)
+
+        assertEquals(PollState.Retry, state)
+    }
+
+    /** Same defense at the download boundary: a throwing Downloader degrades to Retry. */
+    @Test
+    fun `download throwing a transient IOException degrades to Retry`() = runBlocking {
+        val downloader = ThrowingDownloader(IOException("socket timeout"))
+        val deps = AgentDependencies(
+            client = FakeControlPlaneClient(PollResult.Update(sampleAssignment())),
+            downloader = downloader,
+            verifier = FakeVerifier(VerifyResult.Rejected(RejectReason.HASH_MISMATCH)),
+            applyPort = FakeApplyPort(ApplyResult.Launched),
+            telemetry = FakeTelemetry(),
+        )
+
+        val state = OtaPollWorker.runCycle(deps)
+
+        assertEquals(PollState.Retry, state)
+        // A thrown transient error is NOT a verify rejection: no artifact is deleted.
+        assertNull(downloader.deletedPath)
+    }
+
+    /**
+     * Same defense at the verify boundary: a Verifier that THROWS (e.g. an IO error reading
+     * the local artifact) degrades to Retry. A thrown error is NOT a verify REJECTION and must
+     * never be conflated with one (which would delete the artifact + report a hard failure).
+     */
+    @Test
+    fun `verify throwing a transient IOException degrades to Retry, not a hard failure`() = runBlocking {
+        val downloader = FakeDownloader(
+            DownloadResult(DownloadOutcome.Downloaded, "/data/ota_package/ota_update.zip"),
+        )
+        val deps = AgentDependencies(
+            client = FakeControlPlaneClient(PollResult.Update(sampleAssignment())),
+            downloader = downloader,
+            verifier = ThrowingVerifier(IOException("read error")),
+            applyPort = FakeApplyPort(ApplyResult.Launched),
+            telemetry = FakeTelemetry(),
+        )
+
+        val state = OtaPollWorker.runCycle(deps)
+
+        assertEquals(PollState.Retry, state)
+        // Not a rejection -> the artifact must NOT be deleted as if it were poisoned.
+        assertNull(downloader.deletedPath)
+    }
+
+    /**
+     * Anti-bluff guard: the transient-throw defense must NOT be a blanket catch-all —
+     * cooperative WorkManager cancellation (CancellationException) MUST propagate, never be
+     * swallowed into Retry (that would break structured concurrency + WorkManager stop). This
+     * also pins the polarity: a mutation that re-propagates every caught throwable, or that
+     * converts CancellationException to Retry, flips exactly one of these tests.
+     */
+    @Test
+    fun `CancellationException from a port is not swallowed into Retry`() {
+        val deps = AgentDependencies(
+            client = ThrowingControlPlaneClient(CancellationException("worker stopped")),
+            downloader = FakeDownloader(DownloadResult(DownloadOutcome.Downloaded, "/unused")),
+            verifier = FakeVerifier(VerifyResult.Rejected(RejectReason.HASH_MISMATCH)),
+            applyPort = FakeApplyPort(ApplyResult.Launched),
+            telemetry = FakeTelemetry(),
+        )
+
+        assertThrows(CancellationException::class.java) {
+            runBlocking { OtaPollWorker.runCycle(deps) }
+        }
     }
 }

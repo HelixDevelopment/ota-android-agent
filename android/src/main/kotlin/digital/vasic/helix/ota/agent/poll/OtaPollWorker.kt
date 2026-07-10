@@ -60,7 +60,11 @@ class OtaPollWorker(
             deps.telemetry.reportRaw("POLLED")
 
             // 1) poll
-            val pollResult = deps.client.pollForUpdate()
+            // A port that THROWS a transient failure (a network/IO exception raised instead of
+            // RETURNING PollResult.TransientError) must degrade to Retry, exactly like the
+            // returned-transient path below — never escape uncaught (WorkManager would map an
+            // uncaught exception to Result.failure(), i.e. NO backoff retry). See [ioOrNull].
+            val pollResult = ioOrNull { deps.client.pollForUpdate() } ?: return PollState.Retry
             var state = PollStateMachine.onPoll(PollState.Idle, pollResult.toOutcome())
             if (state.isTerminal) return state // NoUpdate -> Success, TransientError -> Retry
             val assignment = (pollResult as PollResult.Update).assignment
@@ -68,7 +72,10 @@ class OtaPollWorker(
 
             // 2) download
             deps.telemetry.report(TelemetryEvent.DOWNLOAD_STARTED)
-            val download = deps.downloader.downloadToLocal(assignment)
+            // Same defense: a Downloader that THROWS on a transient network blip (rather than
+            // returning DownloadOutcome.Failed) must degrade to Retry, not crash the worker.
+            val download = ioOrNull { deps.downloader.downloadToLocal(assignment) }
+                ?: return PollState.Retry
             state = PollStateMachine.onDownload(state, download.outcome)
             if (state.isTerminal) return state // Failed -> Retry
             // Downloader.downloadToLocal's contract promises a non-null localPath whenever
@@ -81,7 +88,11 @@ class OtaPollWorker(
 
             // 3) verify-before-apply (safety-critical gate)
             deps.telemetry.report(TelemetryEvent.VERIFYING)
-            val verify = deps.verifier.verify(localPath, assignment)
+            // A Verifier that THROWS transiently (e.g. an IO error reading the local artifact)
+            // must degrade to Retry — a thrown error is NOT a verify REJECTION and must never
+            // be conflated with one (which would delete the artifact + report a hard failure).
+            val verify = ioOrNull { deps.verifier.verify(localPath, assignment) }
+                ?: return PollState.Retry
             state = when (verify) {
                 is VerifyResult.Ok ->
                     PollStateMachine.onVerify(state, digital.vasic.helix.ota.core.verify.Decision.Apply)
@@ -113,5 +124,32 @@ class OtaPollWorker(
             if (state is PollState.Success) deps.telemetry.report(TelemetryEvent.INSTALLED)
             return state
         }
+
+        /**
+         * Run one suspend port I/O step (poll / download / verify), converting a THROWN
+         * transient failure — a network/IO exception the port raised INSTEAD of returning a
+         * typed transient outcome (PollResult.TransientError / DownloadOutcome.Failed) — into a
+         * `null` so the caller degrades the cycle to [PollState.Retry] (WorkManager backoff),
+         * exactly as a RETURNED transient value does. This closes the asymmetry where a port
+         * that returns Failed retries but the same port throwing on the same transient blip
+         * (the common case: OkHttp/Ktor/java.net raise IOException rather than returning a
+         * sealed error) escaped [runCycle] uncaught — WorkManager maps an uncaught exception to
+         * Result.failure(), i.e. NO backoff retry, breaking the worker's "transient failures
+         * use WorkManager backoff" invariant.
+         *
+         * [kotlinx.coroutines.CancellationException] is rethrown — cooperative WorkManager
+         * cancellation MUST never be swallowed. Only the injected port I/O calls are routed
+         * through here; the pure [PollStateMachine] transitions are NOT, so an illegal
+         * transition (a wiring bug) still fails loudly via its `check` rather than silently
+         * retrying forever.
+         */
+        private suspend fun <T> ioOrNull(block: suspend () -> T): T? =
+            try {
+                block()
+            } catch (cancellation: kotlin.coroutines.cancellation.CancellationException) {
+                throw cancellation
+            } catch (transient: Throwable) {
+                null
+            }
     }
 }
