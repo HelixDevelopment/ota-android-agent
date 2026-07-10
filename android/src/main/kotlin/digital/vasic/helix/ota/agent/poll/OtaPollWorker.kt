@@ -71,7 +71,13 @@ class OtaPollWorker(
             val download = deps.downloader.downloadToLocal(assignment)
             state = PollStateMachine.onDownload(state, download.outcome)
             if (state.isTerminal) return state // Failed -> Retry
-            val localPath = download.localPath!!
+            // Downloader.downloadToLocal's contract promises a non-null localPath whenever
+            // outcome is Downloaded, but DownloadResult.localPath is typed String? (nothing in
+            // the type system enforces the pairing). A buggy/racing Downloader implementation
+            // that returns Downloaded with a null path must NOT crash the worker via `!!` —
+            // treat the broken invariant as a transient failure so WorkManager retries with
+            // backoff instead of the coroutine throwing an uncaught NullPointerException.
+            val localPath = download.localPath ?: return PollState.Retry
 
             // 3) verify-before-apply (safety-critical gate)
             deps.telemetry.report(TelemetryEvent.VERIFYING)
@@ -80,11 +86,13 @@ class OtaPollWorker(
                 is VerifyResult.Ok ->
                     PollStateMachine.onVerify(state, digital.vasic.helix.ota.core.verify.Decision.Apply)
                 is VerifyResult.Rejected ->
+                    // Propagate the Verifier's ACTUAL reason (HASH_MISMATCH / SIGNATURE_INVALID /
+                    // MALFORMED_DIGEST) — never collapse every rejection onto one hardcoded value,
+                    // which would hide a security-relevant SIGNATURE_INVALID behind a benign-looking
+                    // HASH_MISMATCH in PollState.Failed / downstream reporting.
                     PollStateMachine.onVerify(
                         state,
-                        digital.vasic.helix.ota.core.verify.Decision.Reject(
-                            digital.vasic.helix.ota.core.verify.RejectReason.HASH_MISMATCH,
-                        ),
+                        digital.vasic.helix.ota.core.verify.Decision.Reject(verify.reason),
                     )
             }
             if (state is PollState.Failed) {

@@ -53,6 +53,13 @@ dependencies {
     implementation("androidx.work:work-runtime-ktx:2.9.1")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")
 
+    // test (JVM unit tests, `testDebugUnitTest`) — OtaPollWorker.runCycle is a "pure-ish"
+    // suspend driver over injected fakes (ControlPlaneClient/Downloader/Verifier/ApplyPort/
+    // Telemetry) with NO real Android-framework calls in its body, so it is host-JVM
+    // testable without Robolectric/an emulator. Only JUnit4 + coroutines-test are needed.
+    testImplementation("junit:junit:4.13.2")
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.8.1")
+
     // androidTest — REAL on-device instrumentation (runs ON the booted AVD via
     // connectedAndroidTest / `am instrument`). Asserts the agent's genuine on-device
     // behaviour: pure :core decision logic over real inputs + the graceful

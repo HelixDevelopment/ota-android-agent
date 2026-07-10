@@ -11,6 +11,7 @@ import digital.vasic.helix.ota.core.poll.DownloadOutcome
 import digital.vasic.helix.ota.core.poll.PollOutcome
 import digital.vasic.helix.ota.core.protocol.TelemetryEvent
 import digital.vasic.helix.ota.core.protocol.UpdateAvailable
+import digital.vasic.helix.ota.core.verify.RejectReason
 
 /** Result of a poll request (maps onto the :core PollOutcome). */
 sealed interface PollResult {
@@ -54,7 +55,15 @@ interface Verifier {
 
 sealed interface VerifyResult {
     data class Ok(val pkg: VerifiedPackage) : VerifyResult
-    data class Rejected(val reason: String) : VerifyResult
+    /**
+     * [reason] MUST be the specific [RejectReason] the verifier determined (typically the
+     * same value a :core [digital.vasic.helix.ota.core.verify.VerifyBeforeApply] decision
+     * produced) — never a generic placeholder. The worker propagates this value verbatim
+     * into [digital.vasic.helix.ota.core.poll.PollState.Failed]; collapsing every rejection
+     * onto one reason would hide the difference between a benign integrity failure
+     * (HASH_MISMATCH) and a security-relevant authenticity failure (SIGNATURE_INVALID).
+     */
+    data class Rejected(val reason: RejectReason) : VerifyResult
 }
 
 /** Telemetry sink (conceptually over ota-telemetry-schema codecs, posted over REST). */
